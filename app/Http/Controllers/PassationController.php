@@ -94,7 +94,6 @@ class PassationController extends Controller
             'ip'             => 'nullable|string|max:255',
             'description'    => 'nullable|string',
             'file_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,txt|max:10240', // 10MB max
-            'date_passation' => 'nullable|date',
             'salle_id'       => 'required|exists:salles,id',
         ];
 
@@ -115,14 +114,12 @@ class PassationController extends Controller
 
         $data = $request->only([
             'nom_patient', 'prenom', 'cin', 'ip',
-            'description', 'date_passation', 'salle_id'
+            'description', 'salle_id'
         ]);
         $data['user_id'] = Auth::id();
         
-        // Set date_passation to current system date if not provided
-        if (empty($data['date_passation'])) {
-            $data['date_passation'] = now();
-        }
+        // Always set date_passation to current system date
+        $data['date_passation'] = now();
 
         // Handle file upload
         if ($request->hasFile('file_attachment')) {
@@ -174,7 +171,6 @@ class PassationController extends Controller
             'ip'             => 'nullable|string|max:255',
             'description'    => 'nullable|string',
             'file_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,txt|max:10240', // 10MB max
-            'date_passation' => 'nullable|date',
             'salle_id'       => 'required|exists:salles,id',
         ];
 
@@ -191,7 +187,7 @@ class PassationController extends Controller
         $changes = [];
         foreach ($request->only([
             'nom_patient', 'prenom', 'cin', 'ip',
-            'description', 'date_passation', 'salle_id'
+            'description', 'salle_id'
         ]) as $field => $newValue) {
             $oldValue = $passation->$field;
             if ($oldValue != $newValue) {
@@ -210,13 +206,11 @@ class PassationController extends Controller
         // Handle file upload
         $updateData = $request->only([
             'nom_patient', 'prenom', 'cin', 'ip',
-            'description', 'date_passation', 'salle_id'
+            'description', 'salle_id'
         ]);
         
-        // Set date_passation to current system date if not provided
-        if (empty($updateData['date_passation'])) {
-            $updateData['date_passation'] = now();
-        }
+        // Always keep date_passation as current system date for updates
+        $updateData['date_passation'] = now();
 
         if ($request->hasFile('file_attachment')) {
             // Delete old file if exists

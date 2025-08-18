@@ -403,17 +403,7 @@
         </div>
       </div>
 
-      <div class="mb-4">
-        <label for="date_passation" class="block text-sm font-medium text-gray-700">Date de la passation</label>
-        <input
-          type="datetime-local"
-          name="date_passation"
-          id="date_passation"
-          required
-          class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200"
-        >
-        @error('date_passation') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
-      </div>
+
 
       <!-- Rich text editor for description -->
       <div class="mb-4">
@@ -586,15 +576,44 @@
           </div>
         </div>
 
+        <!-- Rich text editor for description in edit form -->
         <div>
-          <label for="description_{{ $passation->id }}" class="block text-sm font-medium text-gray-700 text-left">Consignes</label>
-          <textarea
-            name="description"
-            id="description_{{ $passation->id }}"
-            rows="4"
-            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 {{ $isTimeExpired ? 'bg-gray-100' : '' }}"
-            {{ $isTimeExpired ? 'disabled' : '' }}
-          >{{ old('description', $passation->description) }}</textarea>
+          <label for="description_{{ $passation->id }}" class="block text-sm font-medium text-gray-700 mb-2">Consignes</label>
+          @if(!$isTimeExpired)
+          <div class="border border-gray-300 rounded-md">
+            <div id="toolbar_{{ $passation->id }}" class="border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
+              <button type="button" onclick="formatTextEdit('bold', {{ $passation->id }})" class="px-2 py-1 border rounded hover:bg-gray-200" title="Gras">
+                <strong>B</strong>
+              </button>
+              <button type="button" onclick="formatTextEdit('italic', {{ $passation->id }})" class="px-2 py-1 border rounded hover:bg-gray-200 ml-1" title="Italique">
+                <em>I</em>
+              </button>
+              <button type="button" onclick="formatTextEdit('underline', {{ $passation->id }})" class="px-2 py-1 border rounded hover:bg-gray-200 ml-1" title="Souligné">
+                <u>U</u>
+              </button>
+              <button type="button" onclick="formatTextEdit('insertUnorderedList', {{ $passation->id }})" class="px-2 py-1 border rounded hover:bg-gray-200 ml-1" title="Liste à puces">
+                •
+              </button>
+              <button type="button" onclick="formatTextEdit('insertOrderedList', {{ $passation->id }})" class="px-2 py-1 border rounded hover:bg-gray-200 ml-1" title="Liste numérotée">
+                1.
+              </button>
+            </div>
+            <div
+              id="richTextEditor_{{ $passation->id }}"
+              contenteditable="true"
+              class="p-3 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-auto"
+              style="max-height: 300px;"
+              placeholder="Saisir les consignes..."
+            >{!! old('description', $passation->description) !!}</div>
+          </div>
+          @else
+          <div class="border border-gray-300 rounded-md bg-gray-100">
+            <div class="p-3 min-h-[200px] text-gray-500">
+              {!! old('description', $passation->description) !!}
+            </div>
+          </div>
+          @endif
+          <textarea name="description" id="description_{{ $passation->id }}" class="hidden">{{ old('description', $passation->description) }}</textarea>
         </div>
 
         <!-- File attachment in edit modal -->
@@ -633,17 +652,7 @@
           @error('file_attachment') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
         </div>
 
-        <div>
-          <label for="date_passation_{{ $passation->id }}" class="block text-sm font-medium text-gray-700">Date de la passation</label>
-          <input
-            type="datetime-local"
-            name="date_passation"
-            id="date_passation_{{ $passation->id }}"
-            value="{{ old('date_passation', \Carbon\Carbon::parse($passation->date_passation)->format('Y-m-d\TH:i')) }}"
-            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 {{ $isTimeExpired ? 'bg-gray-100' : '' }}"
-            {{ $isTimeExpired ? 'disabled' : 'required' }}
-          >
-        </div>
+
 
         <div>
           <label for="salle_id_{{ $passation->id }}" class="block text-sm font-medium text-gray-700">Salle</label>
@@ -791,10 +800,6 @@
   // Open Create modal when clicking the green "Ajouter" button
   document.getElementById('openCreateModal')?.addEventListener('click', () => {
     document.getElementById('createModal').classList.remove('hidden');
-    // Set current date and time
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('date_passation').value = now.toISOString().slice(0, 16);
   });
 
   // Close Create modal when clicking close button
@@ -830,10 +835,25 @@
     document.getElementById('richTextEditor').focus();
   }
 
+  // Rich text editor functions for edit forms
+  function formatTextEdit(command, passationId) {
+    document.execCommand(command, false, null);
+    document.getElementById('richTextEditor_' + passationId).focus();
+  }
+
   // Sync rich text editor content with hidden textarea
   document.getElementById('richTextEditor').addEventListener('input', function() {
     document.getElementById('description').value = this.innerHTML;
   });
+
+  // Sync rich text editor content for edit forms
+  @foreach($passations as $passation)
+    @if(now()->diffInMinutes($passation->created_at) <= 30 || Auth::user()->role === 'admin')
+      document.getElementById('richTextEditor_{{ $passation->id }}')?.addEventListener('input', function() {
+        document.getElementById('description_{{ $passation->id }}').value = this.innerHTML;
+      });
+    @endif
+  @endforeach
 
   // Form submission handler
   document.getElementById("createPassationForm").addEventListener("submit", async function(e) {
