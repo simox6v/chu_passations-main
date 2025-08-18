@@ -328,6 +328,7 @@
               <option value="{{ $salle->id }}">{{ $salle->nom }} ({{ $salle->nombre_lits ?? 'N/A' }} lits)</option>
             @endforeach
           </select>
+          <p id="salle_id-error" class="text-red-600 text-sm mt-1 hidden"></p>
           <p id="salleWarning" class="hidden text-red-600 text-sm font-semibold mt-2"></p>
           @error('salle_id') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
         </div>
@@ -385,6 +386,7 @@
             id="cin"
             class="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200"
           >
+          <p id="cin-error" class="text-red-600 text-sm mt-1 hidden"></p>
           @error('cin') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
         </div>
 
@@ -397,6 +399,7 @@
             required
             class="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200"
           >
+          <p id="ip-error" class="text-red-600 text-sm mt-1 hidden"></p>
           @error('ip') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
           <p id="ipExistsMsg" class="text-red-600 mt-1 hidden"></p>
           <p id="ipConflictMsg" class="text-orange-600 mt-1 hidden"></p>
@@ -435,6 +438,7 @@
           ></div>
         </div>
         <textarea name="description" id="description" class="hidden"></textarea>
+        <p id="description-error" class="text-red-600 text-sm mt-1 hidden"></p>
         @error('description') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
       </div>
 
@@ -842,7 +846,7 @@
   }
 
   // Sync rich text editor content with hidden textarea
-  document.getElementById('richTextEditor').addEventListener('input', function() {
+  document.getElementById('richTextEditor')?.addEventListener('input', function() {
     document.getElementById('description').value = this.innerHTML;
   });
 
@@ -866,8 +870,11 @@
     document.getElementById("salleWarning").classList.add("hidden");
 
     // Sync rich text content before submission
-    const richTextContent = document.getElementById("richTextEditor").innerHTML;
-    document.getElementById("description").value = richTextContent;
+    const richTextEditor = document.getElementById("richTextEditor");
+    if (richTextEditor) {
+      const richTextContent = richTextEditor.innerHTML;
+      document.getElementById("description").value = richTextContent;
+    }
 
     const formData = new FormData(this);
 
@@ -909,14 +916,17 @@
       }
     } catch (error) {
       console.error("Error:", error);
-      // alert("Une erreur est survenue: " + error.message);
+      alert("Une erreur est survenue: " + error.message);
     }
   });
 
   // Reset form function
   function resetCreateForm() {
     document.getElementById('createPassationForm').reset();
-    document.getElementById('richTextEditor').innerHTML = '';
+    const richTextEditor = document.getElementById('richTextEditor');
+    if (richTextEditor) {
+      richTextEditor.innerHTML = '';
+    }
     document.getElementById('description').value = '';
     document.getElementById('file_attachment').value = '';
     document.getElementById('patientSearchResults').classList.add('hidden');
