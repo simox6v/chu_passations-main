@@ -108,7 +108,8 @@ class PassationController extends Controller
                                     ->where('salle_id', $request->salle_id)
                                     ->first();
 
-        if ($existingPassation) {
+        // Only return error if user hasn't confirmed the conflict
+        if ($existingPassation && !$request->input('confirm_conflict')) {
             return response()->json(['errors' => ['ip' => 'Cette IP existe déjà pour un patient dans cette salle.']], 422);
         }
 
