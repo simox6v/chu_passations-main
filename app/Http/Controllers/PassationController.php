@@ -94,7 +94,7 @@ class PassationController extends Controller
             'ip'             => 'nullable|string|max:255',
             'description'    => 'nullable|string',
             'file_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,txt|max:10240', // 10MB max
-            'date_passation' => 'required|date',
+            'date_passation' => 'nullable|date',
             'salle_id'       => 'required|exists:salles,id',
         ];
 
@@ -118,6 +118,11 @@ class PassationController extends Controller
             'description', 'date_passation', 'salle_id'
         ]);
         $data['user_id'] = Auth::id();
+        
+        // Set date_passation to current system date if not provided
+        if (empty($data['date_passation'])) {
+            $data['date_passation'] = now();
+        }
 
         // Handle file upload
         if ($request->hasFile('file_attachment')) {
@@ -169,7 +174,7 @@ class PassationController extends Controller
             'ip'             => 'nullable|string|max:255',
             'description'    => 'nullable|string',
             'file_attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,txt|max:10240', // 10MB max
-            'date_passation' => 'required|date',
+            'date_passation' => 'nullable|date',
             'salle_id'       => 'required|exists:salles,id',
         ];
 
@@ -207,6 +212,11 @@ class PassationController extends Controller
             'nom_patient', 'prenom', 'cin', 'ip',
             'description', 'date_passation', 'salle_id'
         ]);
+        
+        // Set date_passation to current system date if not provided
+        if (empty($updateData['date_passation'])) {
+            $updateData['date_passation'] = now();
+        }
 
         if ($request->hasFile('file_attachment')) {
             // Delete old file if exists
