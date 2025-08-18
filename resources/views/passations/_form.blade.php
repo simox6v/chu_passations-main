@@ -89,18 +89,7 @@
     @error('description') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
   </div>
 
-  <div>
-    <label for="date_passation" class="block text-sm font-medium text-gray-700">Date de la passation</label>
-    <input
-      type="datetime-local"
-      name="date_passation"
-      id="date_passation"
-      value="{{ old('date_passation', isset($passation) ? \Carbon\Carbon::parse($passation->date_passation)->format('Y-m-d\TH:i') : '') }}"
-      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200"
-      required
-    >
-    @error('date_passation') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
-  </div>
+
 
   <div>
     <label for="salle_id" class="block text-sm font-medium text-gray-700">Salle</label>
