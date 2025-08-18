@@ -490,16 +490,22 @@
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4"
     role="dialog" aria-modal="true" aria-labelledby="editModalTitle-{{ $passation->id }}"
   >
-    <div class="bg-white rounded-lg shadow-lg max-w-xl w-full p-6 relative max-h-[90vh] overflow-auto">
-      <button
-        class="closeEditModal absolute top-3 right-3 text-gray-700 hover:text-gray-900 text-2xl font-bold"
-        data-id="{{ $passation->id }}"
-        title="Fermer"
-        aria-label="Fermer la fenêtre"
-        type="button"
-      >&times;</button>
+    <div class="bg-white rounded-lg shadow-lg w-[80%] h-[80%] relative flex flex-col max-h-screen overflow-hidden">
+      <!-- Fixed Header -->
+      <div class="flex-shrink-0 p-6 pb-4 border-b border-gray-200 bg-white">
+        <button
+          class="closeEditModal absolute top-3 right-3 text-gray-700 hover:text-gray-900 text-2xl font-bold"
+          data-id="{{ $passation->id }}"
+          title="Fermer"
+          aria-label="Fermer la fenêtre"
+          type="button"
+        >&times;</button>
 
-      <h2 id="editModalTitle-{{ $passation->id }}" class="text-xl font-semibold mb-4">Modifier la passation</h2>
+        <h2 id="editModalTitle-{{ $passation->id }}" class="text-xl font-semibold">Modifier la passation</h2>
+      </div>
+
+      <!-- Scrollable Content -->
+      <div class="flex-1 overflow-y-auto p-6 pt-4">
 
       {{-- Time restriction warning --}}
       @if(auth()->user()->role !== 'admin' && now()->diffInMinutes($passation->created_at) > 30)
@@ -742,6 +748,7 @@
         </div>
         @endif
       </div>
+      </div>
     </div>
   </div>
 @endforeach
@@ -855,6 +862,8 @@
     @endif
   @endforeach
 
+  let userConfirmedConflict = false;
+
   // Form submission handler
   document.getElementById("createPassationForm").addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -870,6 +879,11 @@
     document.getElementById("description").value = richTextContent;
 
     const formData = new FormData(this);
+    
+    // Add confirmation flag if user has confirmed a conflict
+    if (userConfirmedConflict) {
+      formData.append('confirm_conflict', '1');
+    }
 
     try {
       const response = await fetch(this.action, {
@@ -924,6 +938,13 @@
     document.getElementById('ipConflictMsg').classList.add('hidden');
     document.getElementById('salleWarning').classList.add('hidden');
     document.getElementById('submitCreate').disabled = false;
+    userConfirmedConflict = false;
+    
+    // Remove confirmation buttons if they exist
+    const confirmConflict = document.getElementById('confirmConflict');
+    const confirmConflictSameSalle = document.getElementById('confirmConflictSameSalle');
+    if (confirmConflict) confirmConflict.remove();
+    if (confirmConflictSameSalle) confirmConflictSameSalle.remove();
   }
 
   // Patient search functionality
@@ -1127,11 +1148,18 @@
     const salleWarning = document.getElementById('salleWarning');
     const submitBtn = document.getElementById('submitCreate');
 
-    // Reset messages
+    // Reset messages and confirmation state
     ipExistsMsg.classList.add('hidden');
     ipConflictMsg.classList.add('hidden');
     salleWarning.classList.add('hidden');
     submitBtn.disabled = false;
+    userConfirmedConflict = false;
+    
+    // Remove existing confirmation buttons
+    const confirmConflict = document.getElementById('confirmConflict');
+    const confirmConflictSameSalle = document.getElementById('confirmConflictSameSalle');
+    if (confirmConflict) confirmConflict.remove();
+    if (confirmConflictSameSalle) confirmConflictSameSalle.remove();
 
     if (!ipValue || !selectedSalleId) return;
 
@@ -1157,15 +1185,36 @@
           confirmBtn.onclick = function() {
             submitBtn.disabled = false;
             ipConflictMsg.classList.add('hidden');
+            userConfirmedConflict = true;
             this.remove();
           };
           ipConflictMsg.appendChild(confirmBtn);
         }
       } else {
         // Patient exists in same salle
-        ipExistsMsg.textContent = `Cette IP existe déjà pour le patient ${existingPatient.nom_patient} dans cette salle.`;
-        ipExistsMsg.classList.remove('hidden');
+        salleWarning.textContent = `Ce patient existe déjà dans cette salle: ${existingPatient.salle_nom}`;
+        salleWarning.classList.remove('hidden');
+        
+        ipConflictMsg.textContent = 'Veuillez confirmer si vous souhaitez créer une nouvelle passation pour ce patient dans la même salle.';
+        ipConflictMsg.classList.remove('hidden');
         submitBtn.disabled = true;
+        
+        // Add confirmation button
+        if (!document.getElementById('confirmConflictSameSalle')) {
+          const confirmBtn = document.createElement('button');
+          confirmBtn.id = 'confirmConflictSameSalle';
+          confirmBtn.type = 'button';
+          confirmBtn.className = 'mt-2 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600';
+          confirmBtn.textContent = 'Confirmer la création dans la même salle';
+          confirmBtn.onclick = function() {
+            submitBtn.disabled = false;
+            ipConflictMsg.classList.add('hidden');
+            salleWarning.classList.add('hidden');
+            userConfirmedConflict = true;
+            this.remove();
+          };
+          ipConflictMsg.appendChild(confirmBtn);
+        }
       }
     }
   }
