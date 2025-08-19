@@ -224,8 +224,8 @@
                             <!-- Voir popup -->
                             <button
                                 type="button"
-                                class="openShowModalBtn w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
-                                data-id="{{ $passation->id }}"
+                                class="w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
+                                onclick="openShowModal({{ $passation->id }})"
                                 title="Voir"
                                 aria-label="Voir les détails de la passation"
                             >
@@ -754,6 +754,12 @@
 @endforeach
 
 <script>
+  // Function to open show modal (consistent with dashboard)
+  function openShowModal(id) {
+    const modal = document.getElementById('showModal-' + id);
+    if (modal) modal.classList.remove('hidden');
+  }
+
   // Open Edit modal when clicking "Modifier"
   document.querySelectorAll('.openEditModalBtn').forEach(button => {
     button.addEventListener('click', () => {
@@ -776,14 +782,6 @@
       if(e.target === modal) {
         modal.classList.add('hidden');
       }
-    });
-  });
-
-  // Open Show modal when clicking "Voir"
-  document.querySelectorAll('.openShowModalBtn').forEach(button => {
-    button.addEventListener('click', () => {
-      const id = button.dataset.id;
-      document.getElementById('showModal-' + id).classList.remove('hidden');
     });
   });
 
