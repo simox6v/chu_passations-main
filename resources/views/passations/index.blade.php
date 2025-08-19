@@ -756,9 +756,19 @@
 <script>
   // Function to open show modal (consistent with dashboard)
   function openShowModal(id) {
+    console.log('Opening modal for ID:', id);
     const modal = document.getElementById('showModal-' + id);
-    if (modal) modal.classList.remove('hidden');
+    console.log('Modal element found:', modal);
+    if (modal) {
+      modal.classList.remove('hidden');
+      console.log('Modal should be visible now');
+    } else {
+      console.error('Modal not found for ID:', id);
+    }
   }
+
+  // Ensure function is available globally
+  window.openShowModal = openShowModal;
 
   // Open Edit modal when clicking "Modifier"
   document.querySelectorAll('.openEditModalBtn').forEach(button => {
