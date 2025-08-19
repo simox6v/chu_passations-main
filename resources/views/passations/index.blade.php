@@ -225,7 +225,7 @@
                             <button
                                 type="button"
                                 class="w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
-                                onclick="openShowModal({{ $passation->id }})"
+                                onclick="event.stopPropagation(); openShowModal({{ $passation->id }})"
                                 title="Voir"
                                 aria-label="Voir les détails de la passation"
                             >
@@ -757,8 +757,13 @@
   // Function to open show modal (consistent with dashboard)
   function openShowModal(id) {
     const modal = document.getElementById('showModal-' + id);
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+    }
   }
+
+  // Ensure function is available globally
+  window.openShowModal = openShowModal;
 
   // Open Edit modal when clicking "Modifier"
   document.querySelectorAll('.openEditModalBtn').forEach(button => {
@@ -1400,6 +1405,6 @@
         }
       });
     }
-  });
+  }); // End of DOM ready event listener
 </script>
 @endsection
