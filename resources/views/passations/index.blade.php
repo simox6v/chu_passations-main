@@ -171,6 +171,7 @@
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"></th>
                     <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">IP (Identifiant Patient)</th>
                     <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Patient</th>
                     <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Salle</th>
@@ -180,19 +181,43 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-                @forelse($passations as $passation)
-                    <tr class="hover:bg-gray-50 transition-colors duration-150">
-                        <td class="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">{{ $passation->ip ?? 'N/A' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">
-                            {{ $passation->nom_patient }} {{ $passation->prenom }}
+                @php
+                    $passationsByIp = $passations->groupBy('ip')
+                        ->map(fn($group) => $group->sortByDesc('date_passation'))
+                        ->sortByDesc(fn($group) => $group->first()->date_passation);
+                @endphp
+
+                @forelse($passationsByIp as $ip => $ipPassations)
+                    @php
+                        $lastPassation = $ipPassations->first();
+                        $hasMultiple = $ipPassations->count() > 1;
+                    @endphp
+                    
+                    <tr class="cursor-pointer hover:bg-gray-50 transition" data-ip="{{ $ip }}" @if($hasMultiple) onclick="togglePassations('{{ $ip }}')" @endif>
+                        <td class="px-3 text-center select-none text-lg font-bold" style="width: 30px;">
+                            @if($hasMultiple)
+                                <button
+                                    onclick="event.stopPropagation(); togglePassations('{{ $ip }}');"
+                                    id="toggleBtn-{{ $ip }}"
+                                    aria-expanded="false"
+                                    aria-controls="groupRows-{{ $ip }}"
+                                    class="focus:outline-none text-black"
+                                    title="Afficher/Masquer passations"
+                                    type="button"
+                                >&#10148;</button> {{-- ➔ right arrow --}}
+                            @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ $passation->salle->nom ?? 'Non spécifiée' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">{{ $ip ?? 'N/A' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">
+                            {{ $lastPassation->nom_patient }} {{ $lastPassation->prenom }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ $lastPassation->salle->nom ?? 'Non spécifiée' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-700 relative">
                             <p class="font-medium flex items-center justify-between">
-                                {{ $passation->user->name ?? 'Inconnu' }}
+                                {{ $lastPassation->user->name ?? 'Inconnu' }}
 
                                 <div class="flex items-center space-x-2">
-                                    @if($passation->file_attachment)
+                                    @if($lastPassation->file_attachment)
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Pièce jointe disponible">
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
@@ -201,14 +226,14 @@
                                     </span>
                                     @endif
 
-                                    @if($passation->editLogs->count() > 0 && auth()->user()->role === 'admin')
+                                    @if($lastPassation->editLogs->count() > 0 && auth()->user()->role === 'admin')
                                     <button
                                         type="button"
                                         aria-label="Voir les modifications"
                                         title="Voir les modifications"
                                         class="w-6 h-6 flex-shrink-0 cursor-pointer"
-                                        data-passation-id="{{ $passation->id }}"
-                                        onclick="showEditLogs(event, {{ $passation->id }})"
+                                        data-passation-id="{{ $lastPassation->id }}"
+                                        onclick="showEditLogs(event, {{ $lastPassation->id }})"
                                     >
                                         <img src="{{ asset('images/edited.png') }}" alt="Modifié" class="w-full h-full object-contain" draggable="false" />
                                     </button>
@@ -218,28 +243,29 @@
                         </td>
 
                         <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                            {{ \Carbon\Carbon::parse($passation->date_passation)->format('d/m/Y H:i') }}
+                            {{ \Carbon\Carbon::parse($lastPassation->date_passation)->format('d/m/Y H:i') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center space-x-3 flex justify-center items-center">
                             <!-- Voir popup -->
                             <button
                                 type="button"
                                 class="w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
-                                onclick="openShowModal({{ $passation->id }})"
+                                onclick="event.stopPropagation(); openShowModal({{ $lastPassation->id }})"
                                 title="Voir"
                                 aria-label="Voir les détails de la passation"
                             >
                                 <img src="{{ asset('images/show.png') }}" alt="Voir" class="w-full h-full object-contain">
                             </button>
 
-                            @if(auth()->user()->id === $passation->user_id || auth()->user()->role === 'admin')
+                            @if(auth()->user()->id === $lastPassation->user_id || auth()->user()->role === 'admin')
                                 <!-- Modifier -->
                                 <button
                                   type="button"
                                   class="openEditModalBtn w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
-                                  data-id="{{ $passation->id }}"
+                                  data-id="{{ $lastPassation->id }}"
                                   title="Modifier"
                                   aria-label="Modifier la passation"
+                                  onclick="event.stopPropagation();"
                                 >
                                   <img src="{{ asset('images/edit.png') }}" alt="Modifier" class="w-full h-full object-contain">
                                 </button>
@@ -247,8 +273,9 @@
 
                             @if(auth()->user()->role === 'admin')
                                 <!-- Supprimer -->
-                                <form action="{{ route('passations.destroy', $passation) }}" method="POST" class="inline-block"
+                                <form action="{{ route('passations.destroy', $lastPassation) }}" method="POST" class="inline-block"
                                     onsubmit="return confirm('Confirmer la suppression ?')"
+                                    onclick="event.stopPropagation();"
                                 >
                                     @csrf
                                     @method('DELETE')
@@ -259,9 +286,88 @@
                             @endif
                         </td>
                     </tr>
+
+                    @foreach($ipPassations->skip(1) as $passation)
+                        <tr class="bg-green-50 hidden groupRow-{{ $ip }}">
+                            <td></td>
+                            <td class="px-6 py-4 text-gray-400">-</td>
+                            <td class="px-6 py-4 text-gray-400">-</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ $passation->salle->nom ?? 'Non spécifiée' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-700 relative">
+                                <p class="font-medium flex items-center justify-between">
+                                    {{ $passation->user->name ?? 'Inconnu' }}
+
+                                    <div class="flex items-center space-x-2">
+                                        @if($passation->file_attachment)
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Pièce jointe disponible">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                                            </svg>
+                                            Fichier
+                                        </span>
+                                        @endif
+
+                                        @if($passation->editLogs->count() > 0 && auth()->user()->role === 'admin')
+                                        <button
+                                            type="button"
+                                            aria-label="Voir les modifications"
+                                            title="Voir les modifications"
+                                            class="w-6 h-6 flex-shrink-0 cursor-pointer"
+                                            data-passation-id="{{ $passation->id }}"
+                                            onclick="showEditLogs(event, {{ $passation->id }})"
+                                        >
+                                            <img src="{{ asset('images/edited.png') }}" alt="Modifié" class="w-full h-full object-contain" draggable="false" />
+                                        </button>
+                                        @endif
+                                    </div>
+                                </p>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+                                {{ \Carbon\Carbon::parse($passation->date_passation)->format('d/m/Y H:i') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center space-x-3 flex justify-center items-center">
+                                <!-- Voir popup -->
+                                <button
+                                    type="button"
+                                    class="w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
+                                    onclick="openShowModal({{ $passation->id }})"
+                                    title="Voir"
+                                    aria-label="Voir les détails de la passation"
+                                >
+                                    <img src="{{ asset('images/show.png') }}" alt="Voir" class="w-full h-full object-contain">
+                                </button>
+
+                                @if(auth()->user()->id === $passation->user_id || auth()->user()->role === 'admin')
+                                    <!-- Modifier -->
+                                    <button
+                                      type="button"
+                                      class="openEditModalBtn w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150"
+                                      data-id="{{ $passation->id }}"
+                                      title="Modifier"
+                                      aria-label="Modifier la passation"
+                                    >
+                                      <img src="{{ asset('images/edit.png') }}" alt="Modifier" class="w-full h-full object-contain">
+                                    </button>
+                                @endif
+
+                                @if(auth()->user()->role === 'admin')
+                                    <!-- Supprimer -->
+                                    <form action="{{ route('passations.destroy', $passation) }}" method="POST" class="inline-block"
+                                        onsubmit="return confirm('Confirmer la suppression ?')"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" title="Supprimer" aria-label="Supprimer la passation">
+                                            <img src="{{ asset('images/deleted.png') }}" alt="Supprimer" class="w-7 h-7 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-150 object-contain">
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-400 italic">Aucune passation trouvée.</td>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-400 italic">Aucune passation trouvée.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -758,6 +864,21 @@
   function openShowModal(id) {
     const modal = document.getElementById('showModal-' + id);
     if (modal) modal.classList.remove('hidden');
+  }
+
+  // Toggle function for passations grouped by IP
+  function togglePassations(ip) {
+    const rows = document.querySelectorAll('.groupRow-' + ip);
+    const toggleBtn = document.getElementById('toggleBtn-' + ip);
+    if (!rows.length) return;
+
+    const isHidden = rows[0].classList.contains('hidden');
+    rows.forEach(row => row.classList.toggle('hidden', !isHidden));
+
+    if (toggleBtn) {
+      toggleBtn.innerHTML = isHidden ? '&#9660;' : '&#10148;'; // ▼ down if expanded, ➔ right if collapsed
+      toggleBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    }
   }
 
   // Open Edit modal when clicking "Modifier"
